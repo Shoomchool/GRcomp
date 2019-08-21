@@ -15,9 +15,9 @@ GRconnect<-function(projectName,yourName="")
 {
   #invoke a simply funciton and it forces authentication (if it has not happened yet)
   googledrive::drive_auth()
-  GRglobalSettings$status<<-googledrive::drive_about()
-  GRglobalSettings$projectName<<-projectName
-  GRglobalSettings$yourName<<-yourName
+  GRglobalSettings$status<-googledrive::drive_about()
+  GRglobalSettings$projectName<-projectName
+  GRglobalSettings$yourName<-yourName
   if(GRglobalSettings$status$user$emailAddress!="resplabubc@gmail.com") stop("Not the correct user.")
   if(dim(drive_find(projectName))[1]==0)  GRcreateFolder(projectName)
 }
