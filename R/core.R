@@ -6,7 +6,7 @@ GRglobalSettings<-new.env()
 #'@export 
 GRversion<-function()
 {
-  return("2019.08.30")
+  return("2019.08.30.01")
 }
 
 
@@ -86,7 +86,7 @@ GRpush<-function(Robject, overWrite=FALSE, objectName=GRcreateName())
   dir<-tempdir()
   f<-paste0(dir,"\\",GRrandomStr())
   saveRDS(Robject,file = f)
-  drive_upload(media=f,path = paste0(GRglobalSettings$projectName,"/",objectName))
+  googledrive::drive_upload(media=f,path = paste0(GRglobalSettings$projectName,"/",objectName))
   
   if(overWrite)
   {
@@ -96,7 +96,7 @@ GRpush<-function(Robject, overWrite=FALSE, objectName=GRcreateName())
     }
   }
   
-  GRglobalSettings$lastObjectName<<-objectName
+  GRglobalSettings$lastObjectName<-objectName
 }
 
 
