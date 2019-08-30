@@ -11,6 +11,18 @@ GRversion<-function()
 
 
 
+
+#'@export 
+GRstatus<-function()
+{
+  return(GRglobalSettings)
+}
+
+
+
+
+
+
 #'@export 
 GRcheckStatus<-function()
 {
@@ -38,8 +50,6 @@ GRconnect<-function(projectName, yourName="")
   {
     message("Connected to an existing folder.")
   }
-    
-  
 }
 
 
@@ -49,6 +59,8 @@ GRcreateName<-function()
 {
   return(paste0(as.numeric(Sys.time()),".",ifelse(GRglobalSettings$yourName=="",GRrandomStr(),GRglobalSettings$yourName)))
 }
+
+
 
 
 
@@ -101,22 +113,27 @@ GRdeleteAll<-function()
 
 
 #'@export 
-GRlist<-function()
+GRlist<-function(folder="")
 {
   GRcheckStatus()
   
-  files<-googledrive::drive_ls(path=GRglobalSettings$projectName)
+  files<-googledrive::drive_ls(paste0(path=GRglobalSettings$projectName,"/",folder))
   
   n<-dim(files)[1]
   if(n==0) return(c())
   dates<-rep("",n)
+  nms<-files$name
   for(i in 1:n)
   {
     dates[i]<-files[i,]$drive_resource[[1]]$createdTime
+    if(files[i,]$drive_resource[[1]]$mimeType=="application/vnd.google-apps.folder") nms[i]<-paste0("/",nms[i])
   }
   o<-order(dates)
-  return(files$name[o])
+  
+  return(nms[o])
 }
+
+
 
 
 #'@export 
@@ -156,10 +173,25 @@ GRclean<-function()
 #'@export 
 GRrun<-function()
 {
-  if(is.null(GRglobalSettings$status)) stop("Not connected!")
-  path<-tempfile()
-  res<-googledrive::drive_download("RUN.R",path)
-  source(path)
+  GRcheckStatus()
+  x<-GRlist()
+  if(is.na(match("/RUN",x))) stop("No RUN folder was found.")
+  path<-tempdir()
+  files<-GRlist("RUN")
+  for(fl in files)
+  {
+    if(substring(fl,1,1)=="/")
+    {
+      message("Warning: subfolder detectd; content ignored.")
+    }
+    else
+    {
+      message(paste("Doanloading",fl))
+      drive_download(fl,paste0(path,"/",fl))
+    }
+  }
+  setwd(path)
+  source(paste0(path,"/RUN.R"))
 }
 
 
