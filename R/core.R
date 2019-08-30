@@ -3,7 +3,15 @@ library(googledrive)
 GRglobalSettings<-new.env()
 
 
+#'@export 
+GRversion<-function()
+{
+  return("2019.08.30")
+}
 
+
+
+#'@export 
 GRcheckStatus<-function()
 {
   if(is.null(GRglobalSettings$status)) stop("Not connected!")
@@ -11,15 +19,27 @@ GRcheckStatus<-function()
 }
 
 
-GRconnect<-function(projectName,yourName="")
+
+#'@export 
+GRconnect<-function(projectName, yourName="")
 {
   #invoke a simply funciton and it forces authentication (if it has not happened yet)
   googledrive::drive_auth()
   GRglobalSettings$status<-googledrive::drive_about()
   GRglobalSettings$projectName<-projectName
   GRglobalSettings$yourName<-yourName
-  if(GRglobalSettings$status$user$emailAddress!="resplabubc@gmail.com") stop("Not the correct user.")
-  if(dim(drive_find(projectName))[1]==0)  GRcreateFolder(projectName)
+  if(tolower(GRglobalSettings$status$user$emailAddress)!="resplabubc@gmail.com") stop("Not the correct user.")
+  if(dim(googledrive::drive_find(projectName))[1]==0)
+  {
+    GRcreateFolder(projectName)
+    message("A new folder was created.")
+  }
+  else
+  {
+    message("Connected to an existing folder.")
+  }
+    
+  
 }
 
 
@@ -46,7 +66,7 @@ GRcreateFolder<-function(projectName)
 
 
 
-
+#'@export 
 GRpush<-function(Robject, overWrite=FALSE, objectName=GRcreateName())
 {
   GRcheckStatus()
@@ -69,16 +89,18 @@ GRpush<-function(Robject, overWrite=FALSE, objectName=GRcreateName())
 
 
 
+#'@export 
 GRdeleteAll<-function()
 {
   GRcheckStatus()
   
-  files<-drive_find()
+  files<-googledrive::drive_find()
   drive_rm(files)
 }
 
 
 
+#'@export 
 GRlist<-function()
 {
   GRcheckStatus()
@@ -97,33 +119,55 @@ GRlist<-function()
 }
 
 
-
+#'@export 
 GRpull<-function(fileName)
 {
   GRcheckStatus()
   
-  res<-drive_download(fileName,path=tempfile())
+  res<-googledrive::drive_download(fileName,path=tempfile())
   return(readRDS(res$local_path))
 }
 
 
 
 
+#'@export 
 GRclean<-function()
 {
   if(is.null(GRglobalSettings$status)) stop("Not connected!")
   if(GRglobalSettings$status$user$emailAddress!="resplabubc@gmail.com") stop("Not the correct user.")
   
   files<-GRlist()
-  for(file in files)
+  counter<-0
+  for(f in files)
   {
-    drive_rm(file)
+    if(substring(f,first = nchar(f)-1)!=".R")
+    {
+      drive_rm(f)
+      counter<-counter+1
+    }
   }
+  message(paste(counter,"files were deleted."))
 }
 
 
 
 
+#'@export 
+GRrun<-function()
+{
+  if(is.null(GRglobalSettings$status)) stop("Not connected!")
+  path<-tempfile()
+  res<-googledrive::drive_download("RUN.R",path)
+  source(path)
+}
+
+
+
+
+
+
+#'@export 
 GRcollect<-function()
 {
   out<-NULL
