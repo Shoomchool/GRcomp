@@ -6,7 +6,7 @@ GRglobalSettings<-new.env()
 #'@export 
 GRversion<-function()
 {
-  return("2019.08.30.01")
+  return("2019.08.30.02")
 }
 
 
@@ -177,6 +177,7 @@ GRrun<-function()
   x<-GRlist()
   if(is.na(match("/RUN",x))) stop("No RUN folder was found.")
   path<-tempdir()
+  message(paste("Local folder is",path))
   files<-GRlist("RUN")
   for(fl in files)
   {
@@ -187,11 +188,11 @@ GRrun<-function()
     else
     {
       message(paste("Doanloading",fl))
-      drive_download(fl,paste0(path,"/",fl))
+      googledrive::drive_download(fl,paste0(path,"/",fl),overwrite = T)
     }
   }
   setwd(path)
-  source(paste0(path,"/RUN.R"))
+  source(paste0(path,"/GRrun.R"))
 }
 
 
