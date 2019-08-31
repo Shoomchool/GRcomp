@@ -227,7 +227,7 @@ GRcollect<-function()
 
 
 
-
+#'@export
 GRformatOutput<-function(x,rGroupVars,cGroupVars,func=GRformatOutput.defaultProcessor)
 {
   x<-as.data.frame(x)
