@@ -208,15 +208,17 @@ GRcollect<-function()
   for(i in 1:length(files))
   {
     file<-files[i]
-    if(i==1) out<-GRpull(file)
-    else
+    if(substring(file,1,1)!="/")
     {
-      if(is.vector(out))
-        out<-c(out,GRpull(file))
+      if(i==1) out<-GRpull(file)
       else
-        out<-rbind(out,GRpull(file))
+      {
+        if(is.vector(out))
+          out<-c(out,GRpull(file))
+        else
+          out<-rbind(out,GRpull(file))
+      }
     }
-      
   }
   return(out)
 }
