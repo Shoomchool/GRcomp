@@ -6,7 +6,7 @@ GRglobalSettings<-new.env()
 #'@export 
 GRversion<-function()
 {
-  return("2019.08.30.02")
+  return("2021.07.06")
 }
 
 
@@ -55,6 +55,16 @@ GRconnect<-function(projectName, yourName="")
 
 
 
+
+#'@export 
+GRdisconnect<-function()
+{
+  rm(list=ls(envir=GRglobalSettings),envir = GRglobalSettings)
+}
+
+
+
+
 GRcreateName<-function()
 {
   return(paste0(as.numeric(Sys.time()),".",ifelse(GRglobalSettings$yourName=="",GRrandomStr(),GRglobalSettings$yourName)))
@@ -92,7 +102,7 @@ GRpush<-function(Robject, overWrite=FALSE, objectName=GRcreateName())
   {
     if(!is.null(GRglobalSettings$lastObjectName) && GRglobalSettings$lastObjectName!="")
     {
-      drive_rm(GRglobalSettings$lastObjectName)
+      googledrive::drive_rm(GRglobalSettings$lastObjectName)
     }
   }
   
@@ -107,7 +117,7 @@ GRdeleteAll<-function()
   GRcheckStatus()
   
   files<-googledrive::drive_find()
-  drive_rm(files)
+  googledrive::drive_rm(files)
 }
 
 
@@ -160,7 +170,7 @@ GRclean<-function()
   {
     if(substring(f,first = nchar(f)-1)!=".R")
     {
-      drive_rm(f)
+      googledrive::drive_rm(f)
       counter<-counter+1
     }
   }
