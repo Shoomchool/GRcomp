@@ -120,7 +120,7 @@ GRpush<-function(Robject, overWrite=FALSE, fileName=NULL)
   }
   
   dir<-tempdir()
-  local_file<-paste0(dir,"\\",fileName)
+  local_file<-paste0(dir,"/",fileName)
   
   saveRDS(Robject,file = local_file)
   rdrop2::drop_upload(file=local_file, path=GRglobalSettings$projectName)
