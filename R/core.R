@@ -34,24 +34,25 @@ GRcheckStatus<-function()
 #'@export 
 GRconnect<-function(projectName, yourName="")
 {
-  #invoke a simply function and it forces authentication (if it has not happened yet)
-  if(file.exists("./data/token.RDS"))
+  my_path <- find.package("GRcomp")
+  
+  if(file.exists(paste0(my_path,"/data/token.RDS")))
   {
-    token <- rdrop2::drop_auth(rdstoken="./data/token.RDS")
+    token <- rdrop2::drop_auth(rdstoken=paste0(my_path,"/data/token.RDS"))
     message("Token was read from the original file.")
   }
   else
   {
-    if(file.exists("./token.RDS"))
+    if(file.exists("token.RDS"))
     {
       token <- rdrop2::drop_auth(rdstoken="token.RDS")
-      message("Token was read from  file.")
+      message("Token was read from local file.")
     }
     else
     {
       token <- rdrop2::drop_auth()
       saveRDS(token,"token.RDS")
-      message("Token was saved to file.")
+      message("Token was saved to local file.")
     }
   }
   
