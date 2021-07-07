@@ -1,4 +1,4 @@
-library(googledrive)
+library(rdrop2)
 
 GRglobalSettings<-new.env()
 
@@ -27,7 +27,6 @@ GRstatus<-function()
 GRcheckStatus<-function()
 {
   if(is.null(GRglobalSettings$status)) stop("Not connected!")
-  if(GRglobalSettings$status$user$emailAddress!="resplabubc@gmail.com") stop("Not the correct user.")
 }
 
 
@@ -35,13 +34,33 @@ GRcheckStatus<-function()
 #'@export 
 GRconnect<-function(projectName, yourName="")
 {
-  #invoke a simply funciton and it forces authentication (if it has not happened yet)
-  googledrive::drive_auth()
-  GRglobalSettings$status<-googledrive::drive_about()
+  #invoke a simply function and it forces authentication (if it has not happened yet)
+  if(file.exists("./data/token.RDS"))
+  {
+    token <- rdrop2::drop_auth(rdstoken="./data/token.RDS")
+    message("Token was read from the original file.")
+  }
+  else
+  {
+    if(file.exists("./token.RDS"))
+    {
+      token <- rdrop2::drop_auth(rdstoken="token.RDS")
+      message("Token was read from  file.")
+    }
+    else
+    {
+      token <- rdrop2::drop_auth()
+      saveRDS(token,"token.RDS")
+      message("Token was saved to file.")
+    }
+  }
+  
+  GRglobalSettings$token <- token
+  
+  GRglobalSettings$status <- rdrop2::drop_acc()
   GRglobalSettings$projectName<-projectName
   GRglobalSettings$yourName<-yourName
-  if(tolower(GRglobalSettings$status$user$emailAddress)!="resplabubc@gmail.com") stop("Not the correct user.")
-  if(dim(googledrive::drive_find(projectName))[1]==0)
+  if(rdrop2::drop_exists(projectName)==FALSE)
   {
     GRcreateFolder(projectName)
     message("A new folder was created.")
@@ -67,7 +86,8 @@ GRdisconnect<-function()
 
 GRcreateName<-function()
 {
-  return(paste0(as.numeric(Sys.time()),".",ifelse(GRglobalSettings$yourName=="",GRrandomStr(),GRglobalSettings$yourName)))
+  tmp <- paste0(as.numeric(Sys.time()),"_",ifelse(GRglobalSettings$yourName=="",GRrandomStr(),GRglobalSettings$yourName))
+  return(gsub("\\.","_",tmp))
 }
 
 
@@ -81,66 +101,58 @@ GRrandomStr<-function()
 
 
 
-GRcreateFolder<-function(projectName)
+GRcreateFolder<-function(folder_name)
 {
-  googledrive::drive_mkdir(projectName)
+  rdrop2::drop_create(folder_name)
 }
 
 
 
 #'@export 
-GRpush<-function(Robject, overWrite=FALSE, objectName=GRcreateName())
+GRpush<-function(Robject, overWrite=FALSE, fileName=NULL)
 {
   GRcheckStatus()
   
+  if(is.null(fileName))
+  {
+    fileName <-paste0(GRcreateName(),".RDS")
+  }
+  
   dir<-tempdir()
-  f<-paste0(dir,"\\",GRrandomStr())
-  saveRDS(Robject,file = f)
-  googledrive::drive_upload(media=f,path = paste0(GRglobalSettings$projectName,"/",objectName))
+  local_file<-paste0(dir,"\\",fileName)
+  
+  saveRDS(Robject,file = local_file)
+  rdrop2::drop_upload(file=local_file, path=GRglobalSettings$projectName)
   
   if(overWrite)
   {
-    if(!is.null(GRglobalSettings$lastObjectName) && GRglobalSettings$lastObjectName!="")
+    if(!is.null(GRglobalSettings$lastFileName) && GRglobalSettings$lastFileName!="")
     {
-      googledrive::drive_rm(GRglobalSettings$lastObjectName)
+      rdrop2::drop_delete(paste0(GRglobalSettings$projectName,"/",GRglobalSettings$lastFileName))
     }
   }
   
-  GRglobalSettings$lastObjectName<-objectName
+  GRglobalSettings$lastFileName<-fileName
+  file.remove(local_file)
+  return(0)
 }
 
 
 
-#'@export 
-GRdeleteAll<-function()
-{
-  GRcheckStatus()
-  
-  files<-googledrive::drive_find()
-  googledrive::drive_rm(files)
-}
-
 
 
 #'@export 
-GRlist<-function(folder="")
+GRlist<-function()
 {
   GRcheckStatus()
   
-  files<-googledrive::drive_ls(paste0(path=GRglobalSettings$projectName,"/",folder))
+  files <- rdrop2::drop_dir(path = paste0(path=GRglobalSettings$projectName))
   
   n<-dim(files)[1]
   if(n==0) return(c())
   dates<-rep("",n)
   nms<-files$name
-  for(i in 1:n)
-  {
-    dates[i]<-files[i,]$drive_resource[[1]]$createdTime
-    if(files[i,]$drive_resource[[1]]$mimeType=="application/vnd.google-apps.folder") nms[i]<-paste0("/",nms[i])
-  }
-  o<-order(dates)
-  
-  return(nms[o])
+  return(nms)
 }
 
 
@@ -150,9 +162,9 @@ GRlist<-function(folder="")
 GRpull<-function(fileName)
 {
   GRcheckStatus()
-  
-  res<-googledrive::drive_download(fileName,path=tempfile())
-  return(readRDS(res$local_path))
+  local_file <- tempfile()
+  res <- rdrop2::drop_download(path=paste0(GRglobalSettings$projectName,"/",fileName),local_path=local_file,overwrite=T, dtoken = GRglobalSettings$token)
+  return(readRDS(local_file))
 }
 
 
@@ -162,17 +174,13 @@ GRpull<-function(fileName)
 GRclean<-function()
 {
   if(is.null(GRglobalSettings$status)) stop("Not connected!")
-  if(GRglobalSettings$status$user$emailAddress!="resplabubc@gmail.com") stop("Not the correct user.")
-  
+
   files<-GRlist()
   counter<-0
   for(f in files)
   {
-    if(substring(f,first = nchar(f)-1)!=".R")
-    {
-      googledrive::drive_rm(f)
-      counter<-counter+1
-    }
+    rdrop2::drop_delete(paste0(GRglobalSettings$projectName,"/",f))
+    counter<-counter+1
   }
   message(paste(counter,"files were deleted."))
 }
