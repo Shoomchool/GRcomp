@@ -6,7 +6,7 @@ GRglobalSettings<-new.env()
 #'@export 
 GRversion<-function()
 {
-  return("2021.07.07")
+  return("2022.03.04")
 }
 
 
@@ -28,6 +28,8 @@ GRcheckStatus<-function()
 {
   if(is.null(GRglobalSettings$status)) stop("Not connected!")
 }
+
+
 
 
 
@@ -195,7 +197,7 @@ GRpull<-function(fileName)
 
 
 #'@export 
-GRclean<-function()
+GRclean<-function(delete_code=F)
 {
   if(is.null(GRglobalSettings$status)) stop("Not connected!")
 
@@ -203,8 +205,11 @@ GRclean<-function()
   counter<-0
   for(f in files)
   {
-    rdrop2::drop_delete(paste0(GRglobalSettings$projectName,"/",f))
-    counter<-counter+1
+    if(substring(f,nchar(f)-1)!=".R" | delete_code==T)
+    {
+      rdrop2::drop_delete(paste0(GRglobalSettings$projectName,"/",f))
+      counter<-counter+1
+    }
   }
   message(paste(counter,"files were deleted."))
 }
@@ -213,8 +218,9 @@ GRclean<-function()
 
 
 #'@export 
-GRrun<-function(file_name="run.R")
+GRrun<-function(file_name="run.R", machine_id=NULL)
 {
+  if(!is.null(machine_id)) .GlobalEnv$machine_id <- machine_id
   local_folder <- tempdir()
   GRcheckStatus()
   rdrop2::drop_download(paste0(GRglobalSettings$projectName,"/",file_name),local_path =paste0(local_folder,"/",file_name),overwrite = T)
@@ -235,7 +241,7 @@ GRcollect<-function()
   for(i in 1:length(files))
   {
     file<-files[i]
-    if(substring(file,1,1)!="/")
+    if(substring(file,1,1)!="/" && toupper(substring(file,nchar(file)-1))!=".R")
     {
       if(i==1) out<-GRpull(file)
       else
