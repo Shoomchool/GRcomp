@@ -1,4 +1,4 @@
-library(googledrive)
+library(rdrop2)
 
 GRglobalSettings<-new.env()
 
@@ -6,7 +6,7 @@ GRglobalSettings<-new.env()
 #'@export 
 GRversion<-function()
 {
-  return("2021.07.06")
+  return("2022.03.04")
 }
 
 
@@ -27,21 +27,43 @@ GRstatus<-function()
 GRcheckStatus<-function()
 {
   if(is.null(GRglobalSettings$status)) stop("Not connected!")
-  if(GRglobalSettings$status$user$emailAddress!="resplabubc@gmail.com") stop("Not the correct user.")
 }
+
+
 
 
 
 #'@export 
 GRconnect<-function(projectName, yourName="")
 {
-  #invoke a simply funciton and it forces authentication (if it has not happened yet)
-  googledrive::drive_auth()
-  GRglobalSettings$status<-googledrive::drive_about()
+  my_path <- find.package("GRcomp")
+  
+  if(file.exists(paste0(my_path,"/data/token.RDS")))
+  {
+    token <- rdrop2::drop_auth(rdstoken=paste0(my_path,"/data/token.RDS"))
+    message("Token was read from the original file.")
+  }
+  else
+  {
+    if(file.exists("token.RDS"))
+    {
+      token <- rdrop2::drop_auth(rdstoken="token.RDS")
+      message("Token was read from local file.")
+    }
+    else
+    {
+      token <- rdrop2::drop_auth()
+      saveRDS(token,"token.RDS")
+      message("Token was saved to local file.")
+    }
+  }
+  
+  GRglobalSettings$token <- token
+  
+  GRglobalSettings$status <- rdrop2::drop_acc()
   GRglobalSettings$projectName<-projectName
   GRglobalSettings$yourName<-yourName
-  if(tolower(GRglobalSettings$status$user$emailAddress)!="resplabubc@gmail.com") stop("Not the correct user.")
-  if(dim(googledrive::drive_find(projectName))[1]==0)
+  if(rdrop2::drop_exists(projectName)==FALSE)
   {
     GRcreateFolder(projectName)
     message("A new folder was created.")
@@ -67,7 +89,8 @@ GRdisconnect<-function()
 
 GRcreateName<-function()
 {
-  return(paste0(as.numeric(Sys.time()),".",ifelse(GRglobalSettings$yourName=="",GRrandomStr(),GRglobalSettings$yourName)))
+  tmp <- paste0(as.numeric(Sys.time()),"_",ifelse(GRglobalSettings$yourName=="",GRrandomStr(),GRglobalSettings$yourName))
+  return(gsub("\\.","_",tmp))
 }
 
 
@@ -81,66 +104,81 @@ GRrandomStr<-function()
 
 
 
-GRcreateFolder<-function(projectName)
+GRcreateFolder<-function(folder_name)
 {
-  googledrive::drive_mkdir(projectName)
+  rdrop2::drop_create(folder_name)
 }
 
 
 
 #'@export 
-GRpush<-function(Robject, overWrite=FALSE, objectName=GRcreateName())
+GRpush<-function(Robject, overWrite=FALSE, fileName=NULL)
 {
   GRcheckStatus()
   
+  if(is.null(fileName))
+  {
+    fileName <-paste0(GRcreateName(),".RDS")
+  }
+
   dir<-tempdir()
-  f<-paste0(dir,"\\",GRrandomStr())
-  saveRDS(Robject,file = f)
-  googledrive::drive_upload(media=f,path = paste0(GRglobalSettings$projectName,"/",objectName))
+  local_file<-paste0(dir,"/",fileName)
+  
+  saveRDS(Robject,file = local_file)
+  
+  rdrop2::drop_upload(file=local_file, path=GRglobalSettings$projectName)
   
   if(overWrite)
   {
-    if(!is.null(GRglobalSettings$lastObjectName) && GRglobalSettings$lastObjectName!="")
+    if(!is.null(GRglobalSettings$lastFileName) && GRglobalSettings$lastFileName!="")
     {
-      googledrive::drive_rm(GRglobalSettings$lastObjectName)
+      rdrop2::drop_delete(paste0(GRglobalSettings$projectName,"/",GRglobalSettings$lastFileName))
     }
   }
   
-  GRglobalSettings$lastObjectName<-objectName
+  GRglobalSettings$lastFileName<-fileName
+  file.remove(local_file)
+  return(0)
 }
 
 
 
+
 #'@export 
-GRdeleteAll<-function()
+GRupload <- function(local_file, dest_file=NULL)
 {
   GRcheckStatus()
+
+  tmp <- strsplit(local_file,"/")[[1]]
+  pure_file_name <- tmp[length(tmp)]
   
-  files<-googledrive::drive_find()
-  googledrive::drive_rm(files)
+  tmp <- tempdir()
+  
+  if(!is.null(dest_file))
+  {
+    file.copy(from=local_file, to=paste0(tmp,"/",dest_file))
+    local_file <- paste0(tmp,"/",dest_file)
+  }
+  
+  try(rdrop2::drop_delete(path = paste0(GRglobalSettings$projectName,"/",pure_file_name)), silent = T)
+  rdrop2::drop_upload(file=local_file, path=paste0(GRglobalSettings$projectName))
 }
 
 
 
+
 #'@export 
-GRlist<-function(folder="")
+GRlist<-function()
 {
   GRcheckStatus()
   
-  files<-googledrive::drive_ls(paste0(path=GRglobalSettings$projectName,"/",folder))
+  files <- rdrop2::drop_dir(path = paste0(path=GRglobalSettings$projectName))
   
   n<-dim(files)[1]
   if(n==0) return(c())
   dates<-rep("",n)
   nms<-files$name
-  for(i in 1:n)
-  {
-    dates[i]<-files[i,]$drive_resource[[1]]$createdTime
-    if(files[i,]$drive_resource[[1]]$mimeType=="application/vnd.google-apps.folder") nms[i]<-paste0("/",nms[i])
-  }
-  o<-order(dates)
-  
-  return(nms[o])
+  return(nms)
 }
 
 
@@ -150,27 +188,26 @@ GRlist<-function(folder="")
 GRpull<-function(fileName)
 {
   GRcheckStatus()
-  
-  res<-googledrive::drive_download(fileName,path=tempfile())
-  return(readRDS(res$local_path))
+  local_file <- tempfile()
+  res <- rdrop2::drop_download(path=paste0(GRglobalSettings$projectName,"/",fileName),local_path=local_file,overwrite=T, dtoken = GRglobalSettings$token)
+  return(readRDS(local_file))
 }
 
 
 
 
 #'@export 
-GRclean<-function()
+GRclean<-function(delete_code=F)
 {
   if(is.null(GRglobalSettings$status)) stop("Not connected!")
-  if(GRglobalSettings$status$user$emailAddress!="resplabubc@gmail.com") stop("Not the correct user.")
-  
+
   files<-GRlist()
   counter<-0
   for(f in files)
   {
-    if(substring(f,first = nchar(f)-1)!=".R")
+    if(substring(f,nchar(f)-1)!=".R" | delete_code==T)
     {
-      googledrive::drive_rm(f)
+      rdrop2::drop_delete(paste0(GRglobalSettings$projectName,"/",f))
       counter<-counter+1
     }
   }
@@ -181,28 +218,14 @@ GRclean<-function()
 
 
 #'@export 
-GRrun<-function()
+GRrun<-function(file_name="run.R", machine_id=NULL)
 {
+  if(!is.null(machine_id)) .GlobalEnv$machine_id <- machine_id
+  local_folder <- tempdir()
   GRcheckStatus()
-  x<-GRlist()
-  if(is.na(match("/RUN",x))) stop("No RUN folder was found.")
-  path<-tempdir()
-  message(paste("Local folder is",path))
-  files<-GRlist("RUN")
-  for(fl in files)
-  {
-    if(substring(fl,1,1)=="/")
-    {
-      message("Warning: subfolder detectd; content ignored.")
-    }
-    else
-    {
-      message(paste("Doanloading",fl))
-      googledrive::drive_download(fl,paste0(path,"/",fl),overwrite = T)
-    }
-  }
-  setwd(path)
-  source(paste0(path,"/GRrun.R"))
+  rdrop2::drop_download(paste0(GRglobalSettings$projectName,"/",file_name),local_path =paste0(local_folder,"/",file_name),overwrite = T)
+  setwd(local_folder)
+  source(paste0(local_folder,"/",file_name))
 }
 
 
@@ -218,7 +241,7 @@ GRcollect<-function()
   for(i in 1:length(files))
   {
     file<-files[i]
-    if(substring(file,1,1)!="/")
+    if(substring(file,1,1)!="/" && toupper(substring(file,nchar(file)-1))!=".R")
     {
       if(i==1) out<-GRpull(file)
       else
@@ -236,91 +259,6 @@ GRcollect<-function()
 
 
 
-
-#'@export
-GRformatOutput<-function(x,rGroupVars,cGroupVars,func=GRformatOutput.defaultProcessor)
-{
-  x<-as.data.frame(x)
-  
-  allGroups<-paste0(paste0(rGroupVars,collapse=","),",",paste0(cGroupVars,collapse=","))
-  ssql<-paste0("SELECT ", allGroups," FROM x GROUP BY ",allGroups)
-  y<-sqldf(ssql)
-  
-  z<-sqldf(paste0("SELECT DISTINCT ", paste0(rGroupVars,collapse=",") ," FROM y"))
-  n_row<-dim(z)[1]
-  row_names<-rep("",n_row)
-  for(i in 1:dim(z)[2])
-  {
-    if(i>1) row_names<-paste0(row_names,",")
-    row_names<-paste0(row_names,paste0(names(z)[i],":",z[,i]))
-  }
-  z<-sqldf(paste0("SELECT DISTINCT ", paste0(cGroupVars,collapse=",") ," FROM y"))
-  n_col<-dim(z)[1]
-  col_names<-rep("",n_col)
-  for(i in 1:dim(z)[2])
-  {
-    if(i>1) col_names<-paste0(col_names,",")
-    col_names<-paste0(col_names,paste0(names(z)[i],":",z[,i]))
-  }
-  
-  
-  ssql<-"SELECT * FROM x WHERE 1"
-  for(i in 1:dim(y)[2])
-  {
-    ssql<-paste0(ssql," AND ",colnames(y)[i],"=")
-    if(is.numeric(y[,i])) 
-    {
-      ssql<-paste0(ssql,"%f")
-    }
-    else
-    {
-      ssql<-paste0(ssql,"'%s'")
-    }
-  }
-  
-  message(ssql)
-  
-  out<-structure(rep(" ",n_row*n_col),.Dim=c(n_row,n_col))
-  rownames(out)<-row_names
-  colnames(out)<-col_names
-  i_row<-1
-  i_col<-1
-  for(i in 1:(n_row*n_col))
-  {
-    cat(".")
-    ssql2<-do.call(sprintf,args=c(ssql,y[i,]))
-    
-    res<-func(sqldf(ssql2))
-    out[i_row,i_col]<-res
-    i_col<-i_col+1
-    if(i_col>n_col)
-    {
-      i_row<-i_row+1
-      i_col<-1
-    }
-  }
-  return(out)
-}
-
-
-
-
-
-
-GRformatOutput.defaultProcessor<-function(data)
-{
-  out<-""
-  n<-dim(data)[2]
-  nms<-colnames(data)
-  for(i in 1:n)
-  {
-    if(is.numeric(data[,i]))
-    {
-      out<-paste0(out,nms[i],":mean=",mean(data[,i]),"(SD=",sd(data[,i]),"); ")
-    }
-  }
-  return(out)
-}
 
 
 
