@@ -317,8 +317,8 @@ GRserver <- function(server_folder="GRserver", sleep=10)
       {
         local_file <- GRdownload(file)
         print(paste("Sourcing ", file))
-        source(local_file)
-        rdrop2::drop_delete(local_file)
+        try(source(local_file))
+        rdrop2::drop_delete(paste0(server_folder,"/",file))
       }
     }
     print(paste("Waiting for ",sleep,"seconds"))
