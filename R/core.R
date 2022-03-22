@@ -6,7 +6,7 @@ GRglobalSettings<-new.env()
 #'@export 
 GRversion<-function()
 {
-  return("2022.03.04")
+  return("2022.03.22")
 }
 
 
