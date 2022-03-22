@@ -6,7 +6,7 @@ GRglobalSettings<-new.env()
 #'@export 
 GRversion<-function()
 {
-  return("2022.03.04")
+  return("2022.03.22")
 }
 
 
@@ -317,8 +317,8 @@ GRserver <- function(server_folder="GRserver", sleep=10)
       {
         local_file <- GRdownload(file)
         print(paste("Sourcing ", file))
-        source(local_file)
-        rdrop2::drop_delete(local_file)
+        try(source(local_file))
+        rdrop2::drop_delete(paste0(server_folder,"/",file))
       }
     }
     print(paste("Waiting for ",sleep,"seconds"))
