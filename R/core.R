@@ -1,5 +1,3 @@
-library(rdrop2)
-
 GRglobalSettings<-new.env()
 
 
@@ -120,7 +118,6 @@ GRpush<-function(Robject, overWrite=FALSE, fileName=NULL)
   {
     fileName <-paste0(GRcreateName(),".RDS")
   }
-  
   dir<-tempdir()
   local_file<-paste0(dir,"/",fileName)
   
@@ -148,6 +145,17 @@ GRpush<-function(Robject, overWrite=FALSE, fileName=NULL)
 GRupload <- function(local_file, dest_file=NULL)
 {
   GRcheckStatus()
+
+  tmp <- strsplit(local_file,"/")[[1]]
+  pure_file_name <- tmp[length(tmp)]
+  
+  tmp <- tempdir()
+  
+  if(!is.null(dest_file))
+  {
+    file.copy(from=local_file, to=paste0(tmp,"/",dest_file))
+    local_file <- paste0(tmp,"/",dest_file)
+  }
   
   tmp <- strsplit(local_file,"/")[[1]]
   pure_file_name <- tmp[length(tmp)]
@@ -211,11 +219,26 @@ GRdownload<-function(fileName)
 
 
 
+
+
+
+#'@export 
+GRdownload<-function(fileName)
+{
+  GRcheckStatus()
+  local_file <- tempfile()
+  res <- rdrop2::drop_download(path=paste0(GRglobalSettings$projectName,"/",fileName),local_path=local_file,overwrite=T, dtoken = GRglobalSettings$token)
+  return(local_file)
+}
+
+
+
+
 #'@export 
 GRclean<-function(delete_code=F)
 {
   if(is.null(GRglobalSettings$status)) stop("Not connected!")
-  
+
   files<-GRlist()
   counter<-0
   for(f in files)
@@ -283,22 +306,6 @@ GRcollect<-function()
 
 
 
-GRnotify<-function()
-{
-  msg <- paste("Salam")# Define who the sender is
-  sender <- "resplabubc@gmail.com"# Define who should get your email
-  recipients <- c("msafavi@mail.ubc.ca")# Send your email with the send.mail function
-  
-  send.mail(from = sender,
-            to = recipients,
-            subject = "Top 10 cars dashboard",
-            body = msg,
-            smtp = list(host.name = "smtp.gmail.com", port = 587,
-                        user.name = "resplabubc@gmail.com",
-                        passwd = "resplabubc123", ssl = TRUE),
-            authenticate = TRUE,
-            send = TRUE)
-}
 
 
 
