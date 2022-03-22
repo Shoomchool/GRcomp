@@ -196,6 +196,21 @@ GRpull<-function(fileName)
 
 
 
+
+
+
+#'@export 
+GRdownload<-function(fileName)
+{
+  GRcheckStatus()
+  local_file <- tempfile()
+  res <- rdrop2::drop_download(path=paste0(GRglobalSettings$projectName,"/",fileName),local_path=local_file,overwrite=T, dtoken = GRglobalSettings$token)
+  return(local_file)
+}
+
+
+
+
 #'@export 
 GRclean<-function(delete_code=F)
 {
@@ -267,6 +282,7 @@ GRcollect<-function()
 
 
 
+
 GRnotify<-function()
 {
   msg <- paste("Salam")# Define who the sender is
@@ -283,3 +299,33 @@ GRnotify<-function()
                         authenticate = TRUE,
                         send = TRUE)
 }
+
+
+
+
+
+#'@export
+GRserver <- function(server_folder="GRserver", sleep=10)
+{
+  GRconnect(server_folder)
+  while(TRUE)
+  {
+    files<-GRlist()
+    if(!is.null(files))
+    {
+      for(file in files)
+      {
+        local_file <- GRdownload(file)
+        print(paste("Sourcing ", file))
+        source(local_file)
+        rdrop2::drop_delete(local_file)
+      }
+    }
+    print(paste("Waiting for ",sleep,"seconds"))
+    Sys.sleep(sleep)
+  }
+}
+
+
+
+
