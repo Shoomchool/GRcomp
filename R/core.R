@@ -211,17 +211,6 @@ GRdownload<-function(fileName)
 
 
 
-#'@export 
-GRdownload<-function(fileName)
-{
-  GRcheckStatus()
-  local_file <- tempfile()
-  res <- rdrop2::drop_download(path=paste0(GRglobalSettings$projectName,"/",fileName),local_path=local_file,overwrite=T, dtoken = GRglobalSettings$token)
-  return(local_file)
-}
-
-
-
 
 #'@export 
 GRclean<-function(delete_code=F)
@@ -304,17 +293,17 @@ GRcollect<-function()
 GRserver <- function(fileName="server.R", sleep=10)
 {
   GRcheckStatus()
-  fileName <- paste0(GRglobalSettings$projectName,"/",fileName)
+  fullFileName <- paste0(GRglobalSettings$projectName,"/",fileName)
   while(TRUE)
   {
-    if(rdrop2::drop_exists(fileName))
+    if(rdrop2::drop_exists(fullFileName))
     {
-      local_file <- GRdownload(fileName)
+      localFile <- GRdownload(fileName)
       print(paste("Sourcing ", fileName))
-      try(source(local_file))
-      rdrop2::drop_delete(fileName)
+      try(source(localFile))
+      rdrop2::drop_delete(fullFileName)
     }
-    print(paste(fileName,"not found; waiting for ",sleep,"seconds"))
+    print(paste(fullFileName,"not found; waiting for ",sleep,"seconds"))
     Sys.sleep(sleep)
   }
 }
