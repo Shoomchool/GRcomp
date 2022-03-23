@@ -142,34 +142,23 @@ GRpush<-function(Robject, overWrite=FALSE, fileName=NULL)
 
 
 #'@export 
-GRupload <- function(local_file, dest_file=NULL)
+GRupload <- function(localFile, destFile=NULL)
 {
   GRcheckStatus()
 
-  tmp <- strsplit(local_file,"/")[[1]]
-  pure_fileName <- tmp[length(tmp)]
+  tmp <- strsplit(localFile,"/")[[1]]
+  pureFileName <- tmp[length(tmp)]
   
   tmp <- tempdir()
   
-  if(!is.null(dest_file))
+  if(!is.null(destFile))
   {
-    file.copy(from=local_file, to=paste0(tmp,"/",dest_file))
-    local_file <- paste0(tmp,"/",dest_file)
+    file.copy(from=localFile, to=paste0(tmp,"/",destFile))
+    localFile <- paste0(tmp,"/",destFile)
   }
   
-  tmp <- strsplit(local_file,"/")[[1]]
-  pure_fileName <- tmp[length(tmp)]
-  
-  tmp <- tempdir()
-  
-  if(!is.null(dest_file))
-  {
-    file.copy(from=local_file, to=paste0(tmp,"/",dest_file))
-    local_file <- paste0(tmp,"/",dest_file)
-  }
-  
-  try(rdrop2::drop_delete(path = paste0(GRglobalSettings$projectName,"/",pure_fileName)), silent = T)
-  rdrop2::drop_upload(file=local_file, path=paste0(GRglobalSettings$projectName))
+  try(rdrop2::drop_delete(path = paste0(GRglobalSettings$projectName,"/",pureFileName)), silent = T)
+  rdrop2::drop_upload(file=localFile, path=paste0(GRglobalSettings$projectName))
 }
 
 
