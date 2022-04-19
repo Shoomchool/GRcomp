@@ -4,7 +4,7 @@ GRglobalSettings<-new.env()
 #'@export 
 GRversion<-function()
 {
-  return("2022.03.22")
+  return("2022.04.19")
 }
 
 
@@ -13,7 +13,7 @@ GRversion<-function()
 #'@export 
 GRstatus<-function()
 {
-  return(GRglobalSettings)
+  return(as.list(GRglobalSettings))
 }
 
 
@@ -87,7 +87,7 @@ GRdisconnect<-function()
 
 GRcreateName<-function()
 {
-  tmp <- paste0(as.numeric(Sys.time()),"_",ifelse(GRglobalSettings$machineId=="",GRrandomStr(),GRglobalSettings$machineId))
+  tmp <- paste0(ifelse(GRglobalSettings$machineId=="",GRrandomStr(),GRglobalSettings$machineId),"_",as.numeric(Sys.time()))
   return(gsub("\\.","_",tmp))
 }
 
@@ -223,6 +223,7 @@ GRclean<-function(delete_code=F)
   {
     if(substring(f,nchar(f)-1)!=".R" | delete_code==T)
     {
+      message("deleting ",f)
       rdrop2::drop_delete(paste0(GRglobalSettings$projectName,"/",f))
       counter<-counter+1
     }
