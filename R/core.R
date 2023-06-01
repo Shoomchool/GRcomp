@@ -250,6 +250,27 @@ GRrun<-function(fileName="run.R", instanceId=NULL)
 
 
 
+
+#'@export 
+GRrunMany<-function(nInstance, fileName="run.R")
+{
+  for(i in 1:nInstance)
+  {
+    system(paste("Rscript -e \"library(GRcomp); GRconnect(\"",GRstatus()$projectName,"\"); GRrun(\"",fileName,"\")"))
+  }
+}
+
+
+
+aws_set_credentials(
+  access_key_id='AKIA3Y37KENZYYWTHGPY',
+  secret_access_key='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',
+  region = "us-east-2"
+)
+
+aws.ecx::ec2_run_instances(1,1,ImageId="ami-04f6035cfe0232c16", InstanceType='t2.micro')
+
+
 #'@export 
 GRcollect<-function()
 {
