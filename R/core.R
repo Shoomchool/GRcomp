@@ -263,8 +263,8 @@ GRrunMany<-function(nInstance, fileName="run.R")
 
 
 aws_set_credentials(
-  access_key_id='AKIA3Y37KENZYYWTHGPY',
-  secret_access_key='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',
+  access_key_id='',
+  secret_access_key='',
   region = "us-east-2"
 )
 
